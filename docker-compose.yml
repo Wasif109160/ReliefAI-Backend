@@ -1,0 +1,28 @@
+services:
+  reliefai-backend-service:
+    build: .
+    image: ${CONTAINER_NAME:-reliefai-backend}-img:${GIT_COMMIT_HASH:-latest}
+    container_name: ${CONTAINER_NAME:-reliefai-backend}
+    restart: always
+    tty: true
+
+    ports:
+      - "${PORT:-5001}:${PORT:-5001}"
+
+    networks:
+      - app-network
+
+    env_file: .env
+    environment:
+      APP_VERSION: "${GIT_COMMIT_HASH:-latest}"
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${PORT:-5001}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  app-network:
+    driver: bridge
