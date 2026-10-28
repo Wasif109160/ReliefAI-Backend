@@ -8,13 +8,18 @@ import { Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { join } from "path";
+import { existsSync, mkdirSync } from "fs";
 
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useStaticAssets(join(process.cwd(), "uploads"), {
+  const uploadDir = join(process.cwd(), "uploads");
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir, { recursive: true });
+  }
+  app.useStaticAssets(uploadDir, {
     prefix: "/uploads/",
   });
 
@@ -72,6 +77,10 @@ async function bootstrap() {
     ? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
     : [];
 
+  if (process.env.FRONTEND_URL) {
+    configuredOrigins.push(process.env.FRONTEND_URL.trim());
+  }
+
   const defaultOrigins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -105,8 +114,8 @@ async function bootstrap() {
   });
 
   const port = parseInt(process.env.PORT as string, 10) || 5001;
-  await app.listen(port);
-  console.log(`[ReliefAI Backend] NestJS API Server is running on port ${port}`);
-  console.log(`[ReliefAI Backend] Swagger API docs: http://localhost:${port}/api`);
+  await app.listen(port, "0.0.0.0");
+  console.log(`[ReliefAI Backend] NestJS API Server is running on port ${port} (0.0.0.0)`);
+  console.log(`[ReliefAI Backend] Swagger API docs: http://0.0.0.0:${port}/api`);
 }
 bootstrap();

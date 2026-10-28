@@ -5,6 +5,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { User } from "@/modules/user/entities/user.entity";
 import { Request } from "express";
+import { getJwtSecret } from "./auth.constants";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -29,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_BEARER_SECRET || "ffarrfafraerfeffgfgfgfgfgfgr",
+      secretOrKey: getJwtSecret(),
     });
   }
 

@@ -34,14 +34,18 @@ export class SeederService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    await this.seedUsers();
-    await this.seedDisasters();
-    await this.seedShelters();
-    await this.seedSupplies();
-    await this.seedResponders();
-    await this.seedSosRequests();
-    await this.seedDonations();
-    await this.seedNgoApplications();
+    try {
+      await this.seedUsers();
+      await this.seedDisasters();
+      await this.seedShelters();
+      await this.seedSupplies();
+      await this.seedResponders();
+      await this.seedSosRequests();
+      await this.seedDonations();
+      await this.seedNgoApplications();
+    } catch (error) {
+      console.error("[Seeder] Error during initial database seeding:", error);
+    }
   }
 
   private async seedUsers() {

@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "Production-ready NestJS REST API backend for ReliefAI disaster response platform",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

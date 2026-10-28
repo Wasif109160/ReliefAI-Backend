@@ -8,6 +8,11 @@ import { dataSourceOptions } from "@/config/.";
  * @module
  */
 @Module({
-  imports: [TypeOrmModule.forRoot(dataSourceOptions)],
+  imports: [
+    TypeOrmModule.forRoot({
+      ...dataSourceOptions,
+      autoLoadEntities: true,
+    }),
+  ],
 })
 export class PostgresDatabaseProviderModule {}

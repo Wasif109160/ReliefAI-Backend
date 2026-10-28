@@ -14,18 +14,41 @@ export const envSchema = z
     ERROR_LOG: z.coerce.boolean().default(true),
     REQ_LOG: z.coerce.boolean().default(true),
     LOG_FILE: z.coerce.boolean().default(true),
-    JWT_BEARER_SECRET: z.string(),
+    JWT_BEARER_SECRET: z
+      .string()
+      .default(
+        process.env.NODE_ENV === "production"
+          ? ""
+          : "dev_reliefai_jwt_secret_key_at_least_32_characters_long",
+      )
+      .refine(
+        (val) => {
+          if (process.env.NODE_ENV === "production") {
+            return (
+              !!val &&
+              val.length >= 32 &&
+              val !== "ffarrfafraerfeffgfgfgfgfgfgr" &&
+              !val.includes("change-in-production")
+            );
+          }
+          return true;
+        },
+        {
+          message:
+            "Production requires a strong, unique JWT_BEARER_SECRET of at least 32 characters. Insecure fallbacks are rejected.",
+        },
+      ),
     AUTH_SERVER_AUDIENCE: z.string().optional(),
     JWT_TTL: z.coerce.number().default(86400 * 365),
-    PORT: z.coerce.number().default(5000),
-    NODE_ENV: z.enum(["development", "production"]).default("development"),
-    APP_ENV: z.enum(["local", "dev", "prod"]).default("local"),
-    MAILER_HOST: z.string(),
-    MAILER_PORT: z.coerce.number(),
-    MAILER_SECURE: z.coerce.boolean(),
-    MAILER_USER: z.string(),
-    MAILER_PASSWORD: z.string(),
-    MAILER_FROM: z.string(),
+    PORT: z.coerce.number().default(5001),
+    NODE_ENV: z.string().default("development"),
+    APP_ENV: z.string().default("local"),
+    MAILER_HOST: z.string().optional().default("localhost"),
+    MAILER_PORT: z.coerce.number().optional().default(587),
+    MAILER_SECURE: z.coerce.boolean().optional().default(false),
+    MAILER_USER: z.string().optional().default(""),
+    MAILER_PASSWORD: z.string().optional().default(""),
+    MAILER_FROM: z.string().optional().default("no-reply@relief.ai"),
     BULB_REWARD_INTERVAL_SECOND: z.coerce.number().default(7 * 86400),
     BLOCK_QUERY_INTERVAL: z.coerce.number().default(10000),
     LONG_BREAK_THRESHOLD_IN_SECONDS: z.coerce.number().default(18 * 60 * 60), // 18Hours
@@ -39,9 +62,11 @@ export const envSchema = z
   .transform((envs) => {
     return {
       ...envs,
-      REDIS_URL: !!envs.REDIS_PASSWORD
-        ? `redis://:${envs.REDIS_PASSWORD}@${envs.REDIS_HOST}:${envs.REDIS_PORT}`
-        : `redis://${envs.REDIS_HOST}:${envs.REDIS_PORT}`,
+      REDIS_URL:
+        process.env.REDIS_URL ||
+        (envs.REDIS_PASSWORD
+          ? `redis://:${envs.REDIS_PASSWORD}@${envs.REDIS_HOST}:${envs.REDIS_PORT}`
+          : `redis://${envs.REDIS_HOST}:${envs.REDIS_PORT}`),
     };
   });
 

@@ -16,6 +16,7 @@ import {
   UpdateProfileDto,
 } from "./dto/auth.dto";
 import { Role } from "@/common/enums/role.enum";
+import { getJwtSecret, getJwtRefreshSecret } from "./auth.constants";
 
 @Injectable()
 export class AuthService {
@@ -137,7 +138,7 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_BEARER_SECRET || "ffarrfafraerfeffgfgfgfgfgfgr",
+        secret: getJwtRefreshSecret(),
       });
 
       const user = await this.userRepository.findOne({ where: { id: payload.sub } });
@@ -166,12 +167,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: "15m",
-      secret: process.env.JWT_BEARER_SECRET || "ffarrfafraerfeffgfgfgfgfgfgr",
+      secret: getJwtSecret(),
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: rememberMe ? "30d" : "7d",
-      secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_BEARER_SECRET || "ffarrfafraerfeffgfgfgfgfgfgr",
+      secret: getJwtRefreshSecret(),
     });
 
     return {
