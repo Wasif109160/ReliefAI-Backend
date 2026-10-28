@@ -4,6 +4,7 @@ import { User } from "./entities/user.entity";
 import { Repository } from "typeorm";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
 import * as argon2 from "argon2";
+import { AuthSession } from "@/modules/auth/entities/auth-session.entity";
 
 @Injectable()
 export class UserService {
@@ -39,7 +40,9 @@ export class UserService {
 
   async createUser(dto: CreateUserDto) {
     try {
-      const hashedPassword = dto.password ? await argon2.hash(dto.password) : undefined;
+      const hashedPassword = dto.password
+        ? await argon2.hash(dto.password)
+        : undefined;
       const user = this.userRepository.create({
         ...dto,
         password: hashedPassword || "",
@@ -69,8 +72,15 @@ export class UserService {
         updates.password = await argon2.hash(dto.password);
       }
 
-      Object.assign(user, updates);
-      await this.userRepository.save(user);
+      await this.userRepository.manager.transaction(async (manager) => {
+        await manager.update(User, id, updates);
+        if (updates.password)
+          await manager.update(
+            AuthSession,
+            { userId: id },
+            { revokedAt: new Date() },
+          );
+      });
       return await this.userRepository.findOne({ where: { id } });
     } catch (error) {
       throw error;

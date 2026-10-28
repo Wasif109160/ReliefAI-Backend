@@ -1,8 +1,8 @@
 import {
   DefaultNamingStrategy,
   NamingStrategyInterface,
-  DataSourceOptions,
 } from "typeorm";
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 import { camelCase, snakeCase } from "typeorm/util/StringUtils";
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -96,7 +96,7 @@ const isSyncEnabled =
     ? process.env.DB_SYNCHRONIZE === "true"
     : defaultSync;
 
-export const dataSourceOptions: DataSourceOptions = {
+export const dataSourceOptions: PostgresConnectionOptions = {
   type: "postgres",
   ...(databaseUrl
     ? { url: databaseUrl }

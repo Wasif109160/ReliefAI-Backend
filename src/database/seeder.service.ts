@@ -34,6 +34,12 @@ export class SeederService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
+    // Demo data must never create/reset privileged accounts in production.
+    if (
+      process.env.NODE_ENV === "production" ||
+      process.env.SEED_DEMO_DATA !== "true"
+    )
+      return;
     try {
       await this.seedUsers();
       await this.seedDisasters();
@@ -62,7 +68,11 @@ export class SeederService implements OnApplicationBootstrap {
         badgeNumber: "BD-AFD-9001",
         phone: "+880 1711-001122",
         assignedZone: "National EOC Dhaka",
-        skills: ["National Crisis Command", "Armed Forces Logistics", "ICS-400"],
+        skills: [
+          "National Crisis Command",
+          "Armed Forces Logistics",
+          "ICS-400",
+        ],
       },
       {
         name: "Farhana Huq",
@@ -103,7 +113,8 @@ export class SeederService implements OnApplicationBootstrap {
         email: "superadmin@relief.ai",
         passwordRaw: "SuperAdmin@123456",
         role: Role.SUPER_ADMIN,
-        organization: "National Disaster Management Command & Coordination Authority",
+        organization:
+          "National Disaster Management Command & Coordination Authority",
         badgeNumber: "BD-SADM-0001",
         phone: "+880 1711-998877",
         assignedZone: "National Strategic Command Dhaka",
@@ -138,9 +149,8 @@ export class SeederService implements OnApplicationBootstrap {
     for (const u of usersToCreate) {
       const cleanEmail = u.email.toLowerCase().trim();
       let user = await this.userRepo.findOne({ where: { email: cleanEmail } });
-      const hashedPassword = await argon2.hash(u.passwordRaw);
-
       if (!user) {
+        const hashedPassword = await argon2.hash(u.passwordRaw);
         user = this.userRepo.create({
           name: u.name,
           displayName: u.displayName,
@@ -156,13 +166,6 @@ export class SeederService implements OnApplicationBootstrap {
           isEmailVerified: true,
           status: "approved",
         });
-        await this.userRepo.save(user);
-      } else {
-        // Update password and role to ensure demo accounts match credentials
-        user.password = hashedPassword;
-        user.role = u.role;
-        user.name = u.name;
-        user.displayName = u.displayName;
         await this.userRepo.save(user);
       }
     }
@@ -195,7 +198,11 @@ export class SeederService implements OnApplicationBootstrap {
         description:
           "Heavy torrential runoff from Meghalaya hills coupled with record Surma river swelling breached dykes at Gowainghat and Companiganj.",
         recommendedEvacuationRadiusKm: 15.0,
-        activeHazards: ["Submerged electrical infrastructure", "Fast river currents", "Safe drinking water shortage"],
+        activeHazards: [
+          "Submerged electrical infrastructure",
+          "Fast river currents",
+          "Safe drinking water shortage",
+        ],
       },
       {
         title: "Cyclone Landfall Warning: Kutubdia Embankment",
@@ -217,7 +224,11 @@ export class SeederService implements OnApplicationBootstrap {
         description:
           "Severe cyclonic system approaching eastern Bay of Bengal coastline with storm surge forecast of 6-9 feet above astronomical tide.",
         recommendedEvacuationRadiusKm: 25.0,
-        activeHazards: ["Tidal inundation", "Uprooted trees", "Marine communication disruption"],
+        activeHazards: [
+          "Tidal inundation",
+          "Uprooted trees",
+          "Marine communication disruption",
+        ],
       },
     ];
 
@@ -372,7 +383,12 @@ export class SeederService implements OnApplicationBootstrap {
           lng: 91.975,
         },
         radioFreq: "156.800 MHz (VHF Ch 16)",
-        equipment: ["3x Zodiac Boats", "Sonar Depth Scanner", "Trauma First Aid Kit", "Satellite Phone"],
+        equipment: [
+          "3x Zodiac Boats",
+          "Sonar Depth Scanner",
+          "Trauma First Aid Kit",
+          "Satellite Phone",
+        ],
       },
       {
         id: "team-02",
@@ -387,7 +403,12 @@ export class SeederService implements OnApplicationBootstrap {
           lng: 91.845,
         },
         radioFreq: "148.550 MHz Tactical Encrypted",
-        equipment: ["Ambulance Hovercraft", "Mobile Surgical Tent", "Blood Cold-Chain", "Portable Oxygen"],
+        equipment: [
+          "Ambulance Hovercraft",
+          "Mobile Surgical Tent",
+          "Blood Cold-Chain",
+          "Portable Oxygen",
+        ],
       },
       {
         id: "team-03",
@@ -402,7 +423,12 @@ export class SeederService implements OnApplicationBootstrap {
           lng: 91.872,
         },
         radioFreq: "162.400 MHz Local Net",
-        equipment: ["4x 4x4 Heavy Trucks", "Drone Recon Fleet", "Starlink Terminal", "Water Filtration Unit"],
+        equipment: [
+          "4x 4x4 Heavy Trucks",
+          "Drone Recon Fleet",
+          "Starlink Terminal",
+          "Water Filtration Unit",
+        ],
       },
     ];
 
@@ -445,7 +471,8 @@ export class SeederService implements OnApplicationBootstrap {
         phone: "+880 1819-876543",
         disasterId: "dis-001",
         location: {
-          address: "Ward 3, Sunamganj Sadar Upazila (Beside Old District Hospital)",
+          address:
+            "Ward 3, Sunamganj Sadar Upazila (Beside Old District Hospital)",
           lat: 25.066,
           lng: 91.407,
         },
@@ -484,7 +511,8 @@ export class SeederService implements OnApplicationBootstrap {
         donorEmail: "welfare@sylhetdiaspora.co.uk",
         amount: 500000,
         currency: "BDT",
-        allocatedCause: "Rapid Deployment Rescue Speedboats & High-Water Extraction",
+        allocatedCause:
+          "Rapid Deployment Rescue Speedboats & High-Water Extraction",
         impactMetric: "333 Clean Water Filtration Kits Deployed",
         txHash: "0x892a4e8d3c11f77b94a2e5d1643c7b91a2e3f4c5",
         channel: "Direct Humanitarian Wire",
@@ -523,7 +551,11 @@ export class SeederService implements OnApplicationBootstrap {
         website: "https://brac.net",
         hqAddress: "BRAC Centre, 75 Mohakhali, Dhaka-1212",
         operationalDistricts: ["Sylhet", "Sunamganj", "Kurigram", "Netrokona"],
-        reliefCapabilities: ["Water Purification", "Emergency Food Rations", "Shelter Logistics"],
+        reliefCapabilities: [
+          "Water Purification",
+          "Emergency Food Rations",
+          "Shelter Logistics",
+        ],
         documentName: "BRAC_NGOAB_Renewal_Certificate_2025.pdf",
         status: "pending",
       },

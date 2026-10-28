@@ -8,11 +8,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { User } from "@/modules/user/entities/user.entity";
 import { ResponderTeam } from "@/modules/responder/entities/responder.entity";
-import {
-  ProvisionUserDto,
-  UpdateUserRoleStatusDto,
-} from "./dto/admin.dto";
+import { ProvisionUserDto, UpdateUserRoleStatusDto } from "./dto/admin.dto";
 import * as argon2 from "argon2";
+import { AuthSession } from "@/modules/auth/entities/auth-session.entity";
 
 @Injectable()
 export class AdminService {
@@ -37,11 +35,23 @@ export class AdminService {
     }
 
     if (dto.role) user.role = dto.role;
-    if (dto.isEmailVerified !== undefined) user.isEmailVerified = dto.isEmailVerified;
+    if (dto.isEmailVerified !== undefined)
+      user.isEmailVerified = dto.isEmailVerified;
     if (dto.assignedZone) user.assignedZone = dto.assignedZone;
     if (dto.status) user.status = dto.status;
 
-    const saved = await this.userRepository.save(user);
+    const saved = await this.userRepository.manager.transaction(
+      async (manager) => {
+        const savedUser = await manager.save(User, user);
+        if (dto.role || dto.status)
+          await manager.update(
+            AuthSession,
+            { userId },
+            { revokedAt: new Date() },
+          );
+        return savedUser;
+      },
+    );
     return { success: true, user: saved };
   }
 
@@ -51,7 +61,9 @@ export class AdminService {
       where: { email: cleanEmail },
     });
     if (existing) {
-      throw new ConflictException(`User with email '${cleanEmail}' already exists.`);
+      throw new ConflictException(
+        `User with email '${cleanEmail}' already exists.`,
+      );
     }
 
     if (dto.assignedTeamId) {
@@ -65,7 +77,9 @@ export class AdminService {
       }
     }
 
-    const tempPassword = dto.temporaryPassword || `Relief@${Math.floor(100000 + Math.random() * 900000)}`;
+    const tempPassword =
+      dto.temporaryPassword ||
+      `Relief@${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedPassword = await argon2.hash(tempPassword);
 
     const user = this.userRepository.create({

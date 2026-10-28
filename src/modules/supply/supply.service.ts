@@ -27,37 +27,52 @@ export class SupplyService {
   }
 
   async processAction(dto: UpdateSupplyActionDto) {
-    const supply = await this.supplyRepository.findOne({ where: { id: dto.id } });
-    if (!supply) {
-      throw new NotFoundException(`Supply item with ID ${dto.id} not found`);
+    if (
+      !["dispatch", "restock"].includes(dto.action) ||
+      !Number.isSafeInteger(Number(dto.quantity)) ||
+      Number(dto.quantity) <= 0
+    ) {
+      throw new BadRequestException(
+        "Action must be dispatch/restock and quantity a positive integer",
+      );
     }
-
-    const qty = Number(dto.quantity);
-    if (isNaN(qty) || qty <= 0) {
-      throw new BadRequestException("Quantity must be a positive number");
-    }
-
-    if (dto.action === "dispatch") {
-      if (supply.quantity < qty) {
-        throw new BadRequestException(
-          `Insufficient stock. Available: ${supply.quantity}, requested: ${qty}`,
-        );
+    return this.supplyRepository.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(SupplyItem);
+      const supply = await repo.findOne({
+        where: { id: dto.id },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!supply) {
+        throw new NotFoundException(`Supply item with ID ${dto.id} not found`);
       }
-      supply.quantity -= qty;
-      supply.allocated = (supply.allocated || 0) + qty;
-    } else if (dto.action === "restock") {
-      supply.quantity += qty;
-    }
 
-    // Refresh status indicator
-    if (supply.quantity <= 0) {
-      supply.status = "critical";
-    } else if (supply.quantity < supply.threshold) {
-      supply.status = "low";
-    } else {
-      supply.status = "adequate";
-    }
+      const qty = Number(dto.quantity);
+      if (isNaN(qty) || qty <= 0) {
+        throw new BadRequestException("Quantity must be a positive number");
+      }
 
-    return await this.supplyRepository.save(supply);
+      if (dto.action === "dispatch") {
+        if (supply.quantity < qty) {
+          throw new BadRequestException(
+            `Insufficient stock. Available: ${supply.quantity}, requested: ${qty}`,
+          );
+        }
+        supply.quantity -= qty;
+        supply.allocated = (supply.allocated || 0) + qty;
+      } else if (dto.action === "restock") {
+        supply.quantity += qty;
+      }
+
+      // Refresh status indicator
+      if (supply.quantity <= 0) {
+        supply.status = "critical";
+      } else if (supply.quantity < supply.threshold) {
+        supply.status = "low";
+      } else {
+        supply.status = "adequate";
+      }
+
+      return await repo.save(supply);
+    });
   }
 }

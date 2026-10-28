@@ -31,7 +31,13 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.register(dto);
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    this.setAuthCookies(
+      res,
+      result.accessToken,
+      result.refreshToken,
+      false,
+      result.refreshExpiresAt,
+    );
     return result;
   }
 
@@ -42,7 +48,13 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(dto);
-    this.setAuthCookies(res, result.accessToken, result.refreshToken, dto.rememberMe);
+    this.setAuthCookies(
+      res,
+      result.accessToken,
+      result.refreshToken,
+      dto.rememberMe,
+      result.refreshExpiresAt,
+    );
     return result;
   }
 
@@ -78,17 +90,23 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken =
-      bodyToken ||
-      (req.cookies && req.cookies.reliefai_refresh_token);
+      bodyToken || (req.cookies && req.cookies.reliefai_refresh_token);
 
     const result = await this.authService.refreshToken(refreshToken);
-    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    this.setAuthCookies(
+      res,
+      result.accessToken,
+      result.refreshToken,
+      false,
+      result.refreshExpiresAt,
+    );
     return result;
   }
 
   @Post("logout")
   @ApiOperation({ summary: "Log out and clear session cookies" })
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.cookies?.reliefai_refresh_token);
     res.clearCookie("reliefai_access_token", { path: "/" });
     res.clearCookie("reliefai_refresh_token", { path: "/" });
     return { success: true, message: "Logged out successfully" };
@@ -99,9 +117,14 @@ export class AuthController {
     accessToken: string,
     refreshToken: string,
     rememberMe = false,
+    refreshExpiresAt?: string,
   ) {
     const isProd = process.env.NODE_ENV === "production";
-    const refreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    const refreshMaxAge = refreshExpiresAt
+      ? Math.max(0, new Date(refreshExpiresAt).getTime() - Date.now())
+      : rememberMe
+        ? 30 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
 
     res.cookie("reliefai_access_token", accessToken, {
       httpOnly: true,

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsIn } from "class-validator";
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsIn,
+  IsInt,
+  Min,
+} from "class-validator";
 
 export class CreateSupplyDto {
   @ApiProperty({ example: "Clean Water Purifying Tablets" })
@@ -14,7 +22,8 @@ export class CreateSupplyDto {
 
   @ApiProperty({ example: 12000 })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
   quantity!: number;
 
   @ApiProperty({ example: "strips" })
@@ -29,7 +38,8 @@ export class CreateSupplyDto {
 
   @ApiPropertyOptional({ default: 50 })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
   threshold?: number;
 }
 
@@ -46,6 +56,7 @@ export class UpdateSupplyActionDto {
 
   @ApiProperty({ example: 500 })
   @IsNotEmpty()
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   quantity!: number;
 }
