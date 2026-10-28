@@ -7,10 +7,11 @@ import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./jwt.strategy";
 import { getJwtSecret } from "./auth.constants";
+import { AuthSession } from "./entities/auth-session.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, AuthSession]),
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.register({
       secret: getJwtSecret(),

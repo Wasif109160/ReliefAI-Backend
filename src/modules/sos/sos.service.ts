@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { SosRequest } from "./entities/sos.entity";
@@ -46,7 +50,11 @@ export class SosService {
     let priority = dto.priority ?? "HIGH";
 
     if (dto.urgencyScore === undefined) {
-      if ((dto.trappedCount && dto.trappedCount > 5) || (dto.injuriesCount && dto.injuriesCount > 2) || dto.needsBoat) {
+      if (
+        (dto.trappedCount && dto.trappedCount > 5) ||
+        (dto.injuriesCount && dto.injuriesCount > 2) ||
+        dto.needsBoat
+      ) {
         score = 92;
         priority = "CRITICAL";
       } else if (dto.trappedCount && dto.trappedCount > 0) {
@@ -87,29 +95,44 @@ export class SosService {
   }
 
   async dispatchSos(id: string, dto: DispatchSosDto) {
-    const sos = await this.sosRepository.findOne({ where: { id } });
-    if (!sos) {
-      throw new NotFoundException(`SOS request with ID ${id} not found`);
-    }
+    return this.sosRepository.manager.transaction(async (manager) => {
+      const sosRepo = manager.getRepository(SosRequest);
+      const teamRepo = manager.getRepository(ResponderTeam);
+      const sos = await sosRepo.findOne({
+        where: { id },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!sos) {
+        throw new NotFoundException(`SOS request with ID ${id} not found`);
+      }
 
-    const team = await this.responderRepository.findOne({ where: { id: dto.teamId } });
+      if (sos.status !== "pending")
+        throw new ConflictException("SOS is no longer pending");
+      const team = await teamRepo.findOne({
+        where: { id: dto.teamId },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!team) throw new NotFoundException("Responder team not found");
+      if (team.status !== "available" || team.assignedSOSId)
+        throw new ConflictException("Team is unavailable");
 
-    sos.status = "dispatched";
-    sos.assignedTeamId = dto.teamId;
-    sos.assignedTeamName = team ? team.name : `Tactical Team (${dto.teamId})`;
-    sos.dispatchEtaMinutes = dto.etaMinutes || 12;
+      sos.status = "dispatched";
+      sos.assignedTeamId = dto.teamId;
+      sos.assignedTeamName = team.name;
+      sos.dispatchEtaMinutes = dto.etaMinutes ?? 12;
 
-    if (team) {
-      team.status = "dispatched";
-      team.assignedSOSId = sos.id;
-      await this.responderRepository.save(team);
-    }
+      if (team) {
+        team.status = "dispatched";
+        team.assignedSOSId = sos.id;
+        await teamRepo.save(team);
+      }
 
-    const updated = await this.sosRepository.save(sos);
-    return {
-      success: true,
-      sos: updated,
-      dispatchedTeam: team,
-    };
+      const updated = await sosRepo.save(sos);
+      return {
+        success: true,
+        sos: updated,
+        dispatchedTeam: team,
+      };
+    });
   }
 }

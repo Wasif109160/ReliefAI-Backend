@@ -6,13 +6,20 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserService } from "./user.service";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
+import { JwtGuard } from "@/common/guard/jwt.guard";
+import { RolesGuard } from "@/common/guard/roles.guard";
+import { Roles } from "@/common/decorators/roles.decorator";
+import { Role } from "@/common/enums/role.enum";
 
 @ApiTags("users")
 @Controller("users")
+@UseGuards(JwtGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

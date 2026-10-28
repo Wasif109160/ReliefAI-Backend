@@ -95,7 +95,7 @@ async function bootstrap() {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow during development across dynamic local IPs
+        callback(null, false);
       }
     },
     credentials: true,

@@ -21,12 +21,30 @@ export class SosController {
   constructor(private readonly sosService: SosService) {}
 
   @Get()
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(
+    Role.ADMIN,
+    Role.GOVERNMENT,
+    Role.RESCUE_TEAM,
+    Role.COMMANDER,
+    Role.RESPONDER,
+    Role.NGO,
+  )
   @ApiOperation({ summary: "Get all SOS requests" })
   async getSosRequests(@Query() query: any) {
     return await this.sosService.getSosRequests(query);
   }
 
   @Get(":id")
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(
+    Role.ADMIN,
+    Role.GOVERNMENT,
+    Role.RESCUE_TEAM,
+    Role.COMMANDER,
+    Role.RESPONDER,
+    Role.NGO,
+  )
   @ApiOperation({ summary: "Get SOS request details by ID" })
   async getSosById(@Param("id") id: string) {
     return await this.sosService.getSosById(id);

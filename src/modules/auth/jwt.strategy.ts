@@ -6,6 +6,8 @@ import { Repository } from "typeorm";
 import { User } from "@/modules/user/entities/user.entity";
 import { Request } from "express";
 import { getJwtSecret } from "./auth.constants";
+import { JWT_ISSUER, JWT_AUDIENCE } from "./auth.constants";
+import { AuthSession } from "./entities/auth-session.entity";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -31,6 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ]),
       ignoreExpiration: false,
       secretOrKey: getJwtSecret(),
+      algorithms: ["HS256"],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
@@ -41,9 +46,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
+    if (!user || user.status !== "approved") {
       throw new UnauthorizedException("User no longer exists");
     }
+    if (!payload.sessionId) throw new UnauthorizedException("Session missing");
+    const session = await this.userRepository.manager.findOneBy(AuthSession, {
+      id: payload.sessionId,
+      userId,
+    });
+    if (!session || session.revokedAt || session.expiresAt <= new Date())
+      throw new UnauthorizedException("Session expired or revoked");
 
     return user;
   }

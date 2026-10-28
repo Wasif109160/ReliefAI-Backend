@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsBoolean } from "class-validator";
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsInt,
+  Min,
+} from "class-validator";
 
 export class CreateSosDto {
   @ApiProperty({ example: "Rafiqul Islam" })
@@ -30,7 +38,10 @@ export class CreateSosDto {
     lng: number;
   };
 
-  @ApiProperty({ example: "Surma flash floodwaters reached rooftop! Need boat extraction immediately." })
+  @ApiProperty({
+    example:
+      "Surma flash floodwaters reached rooftop! Need boat extraction immediately.",
+  })
   @IsNotEmpty()
   @IsString()
   details!: string;
@@ -83,7 +94,8 @@ export class DispatchSosDto {
 
   @ApiPropertyOptional({ example: 15 })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   etaMinutes?: number;
 
   @ApiPropertyOptional()
