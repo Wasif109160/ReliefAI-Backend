@@ -15,7 +15,8 @@ import { AuthSession } from "./entities/auth-session.entity";
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.register({
       secret: getJwtSecret(),
-      signOptions: { expiresIn: "15m" },
+      // AuthService sets access and refresh expiry separately. A shared
+      // expiresIn conflicts with the refresh token's absolute exp claim.
     }),
   ],
   controllers: [AuthController],

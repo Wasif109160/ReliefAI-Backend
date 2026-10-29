@@ -12,7 +12,8 @@ import { Test } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { PassportModule } from "@nestjs/passport";
-import { JwtService } from "@nestjs/jwt";
+import { JwtModule, JwtService } from "@nestjs/jwt";
+import { AuthModule } from "../src/modules/auth/auth.module";
 import request from "supertest";
 import cookieParser from "cookie-parser";
 import * as argon2 from "argon2";
@@ -114,11 +115,16 @@ describe("HTTP authentication and authorization regressions", () => {
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      imports: [PassportModule.register({ defaultStrategy: "jwt" })],
+      imports: [
+        PassportModule.register({ defaultStrategy: "jwt" }),
+        // Use the actual production JWT configuration to catch merged signing defaults.
+        ...Reflect.getMetadata("imports", AuthModule).filter(
+          (entry: any) => entry.module === JwtModule,
+        ),
+      ],
       controllers: [AuthController, UserController, SosController],
       providers: [
         AuthService,
-        JwtService,
         JwtStrategy,
         { provide: getRepositoryToken(User), useValue: repo },
         { provide: UserService, useValue: userService },
@@ -219,6 +225,30 @@ describe("HTTP authentication and authorization regressions", () => {
       .get("/sos")
       .auth(r.body.accessToken, { type: "bearer" })
       .expect(403);
+  });
+  it("issues 15-minute access tokens and preserves 7/30-day refresh expiry on rotation", async () => {
+    const jwt = new JwtService();
+    for (const rememberMe of [false, true]) {
+      const r = await request(app.getHttpServer())
+        .post("/auth/login")
+        .send({
+          email: "citizen@test.local",
+          password: "TestPassword123!",
+          rememberMe,
+        })
+        .expect(201);
+      const access: any = jwt.decode(r.body.accessToken);
+      const refresh: any = jwt.decode(r.body.refreshToken);
+      expect(access.exp - access.iat).toBe(900);
+      expect(refresh.exp - refresh.iat).toBe((rememberMe ? 30 : 7) * 86400);
+      const rotated = await request(app.getHttpServer())
+        .post("/auth/refresh")
+        .send({ refreshToken: r.body.refreshToken })
+        .expect(201);
+      expect((jwt.decode(rotated.body.refreshToken) as any).exp).toBe(
+        refresh.exp,
+      );
+    }
   });
   it("logout revokes both access and refresh credentials", async () => {
     const r = await login();
